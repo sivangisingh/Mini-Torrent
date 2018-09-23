@@ -7,10 +7,11 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <string>
-#include<iostream>
+#include <iostream> 
+#include <thread>
+#include<pthread.h>
 #include <sstream> 
 #include <vector>
-#include<thread>
 #include<arpa/inet.h>
 #include <map>
 #include<fstream>
@@ -83,26 +84,30 @@ void share(int argc, char *argv[]){
      bzero(buff,20);
      read(newsockfd,buff,20);
      // cout<<"buff recieved\n";
-     ofstream myfile;
-  	 myfile.open ("seederlist.txt");
-  	//  	FILE * myfile;
+    //  ofstream myfile;
+  	 // myfile.open ("seederlist.txt");
+  	 	FILE * myfile;
   	// // ifstream file(path, ifstream::binary);
-  	// 	myfile = fopen ("seederlist.txt" , "w" );
+  		myfile = fopen ("seederlist.txt" , "a" );
         for (int i = 0; i < 20; i++)
             sprintf(&mdString[i * 2], "%02x",buff[i]);
  		char *ipstr = new char[16];
 		strcpy(ipstr,inet_ntoa(cli_addr.sin_addr));
 		// cout<<"printing in file:";
-		// fprintf(myfile, "%s ", mdString);
-  		myfile << mdString;
-  		myfile << "  ";
-  		// fprintf(myfile, "%s",ipstr);
-  		myfile << ipstr;
+		fprintf(myfile, "%s ", mdString);
+  		// myfile << mdString;
+  		// myfile << "  ";
+  		char buffer2[40];
+  		bzero(buffer2,40);
+     	read(newsockfd,buffer2,40);
+     	printf("%s\n",buffer2);
+  		fprintf(myfile, "%s\n",buffer2);
+  		// myfile << ipstr;
   		// fprintf( myfile, ":%s\n", cli_addr.sin_port);
-  		myfile << ":" <<cli_addr.sin_port;
-  		myfile << "\n";
+  		// myfile << ":" <<cli_addr.sin_port;
+  		// myfile << "\n";
   		printf("%s\n",mdString);
-  		// close(myfile);
+  		fclose(myfile);
   		// cout << mdString;
   		// cout << "  ";
   		// cout << ipstr;
@@ -122,6 +127,7 @@ void share(int argc, char *argv[]){
 		std::vector<string> v;
 	v=seederlist(mString);
 	// printf("clients \n");
+
 	for(auto it=v.begin();it!=v.end();it++)
 		cout<<*it<<"\n";
 	 }else if(command=="remove"){

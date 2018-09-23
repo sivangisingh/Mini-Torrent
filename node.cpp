@@ -3,7 +3,6 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <fstream>
-#include <openssl/sha.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -11,10 +10,12 @@
 #include <netdb.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <iostream>
+#include <iostream> 
+#include <thread>
+#include <pthread.h>
 #include <vector>
-#include <thread>  
 #include <openssl/bio.h>
+#include <openssl/sha.h>
 #include <openssl/buffer.h>
 #include <openssl/des.h>
 #include <openssl/evp.h>
@@ -80,7 +81,12 @@ int sendmtorrent(int argc, char *argv1,char *argv2,string path,unsigned char *sh
     n = write(sockfd, sha, 20);
     if (n < 0) 
          error("ERROR reading from socket");
-    printf("%s\n", buffer);
+       printf("arg1 %s\n", argv1);
+       // string cl;
+       // cl=argv1;
+       // printf("%s\n", cl);
+       write(sockfd,argv1,40);
+    // printf("%s\n", buffer);
     close(sockfd);
     return 0;
 }
@@ -207,9 +213,11 @@ int main(int argc, char *argv[])
     string mt_name;
     cin>>path>>mt_name;
     client c1;
-    c1.filetaken(argc,argv[1],argv[2],path,mt_name,s);
-    // std::thread t1(&client::filetaken, client(),argc,argv[1],argv[2],path,mt_name);
-    // t1.detach();
+    // pthread_t thread;
+
+    // c1.filetaken(argc,argv[1],argv[2],path,mt_name,s);
+    std::thread t1(&client::filetaken, client(),argc,argv[1],argv[2],path,mt_name,s);
+    t1.join();
   }
   if(s=="get"){
     string mt_path,dest_path;
