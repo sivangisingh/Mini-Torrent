@@ -27,7 +27,6 @@ int main(int argc, char *argv[])
     FILE * file;
     char toSEND[1];
     char remoteFILE[4096];
-    // char buffer[256];
     portno = atoi(argv[2]);
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     server = gethostbyname(argv[1]);
@@ -67,21 +66,9 @@ int main(int argc, char *argv[])
       }
       char buffer[this_chunk_size];
       fread(buffer,sizeof(char),this_chunk_size,file);
-      // file.read(buffer,this_chunk_size);
       write(sockfd,buffer,this_chunk_size);
       bzero(buffer,this_chunk_size);
     }
-
-    // file_to_send = fopen ("OS_Assignment_1.pdf","r");
-    // int j = 0;
-    // while((n=fread(buffer,sizeof(char),255,file_to_send))>0){
-    //     cout << "\nYo";
-    //     write(sockfd,buffer,n);
-    //     cout << "\tTransferring " << ++j << "\tBlock: " << n;
-    //     bzero(buffer,256);
-    // }
-    // n = read(sockfd, buffer, 256);
-    // printf("%s\n", buffer);
     close(sockfd);
     return 0;
 }
