@@ -21,6 +21,14 @@ void error(const char *msg)
     perror(msg);
     exit(1);
 }
+string getport(string name){
+  int n=name.find(":");
+  return name.substr(n+1);
+}
+string getip(string name){
+  int n=name.find(":");
+  return name.substr(0,n);
+}
 std::vector<string> seederlist(char *sha){
 	ifstream fin;
 	fin.open("seederlist.txt");     
@@ -47,10 +55,6 @@ void share(int argc, char *argv[]){
      socklen_t clilen;
      struct sockaddr_in serv_addr, cli_addr;
      int n;
-     if (argc < 2) {
-         fprintf(stderr,"ERROR, no port provided\n");
-         exit(1);
-     }
      sockfd =  socket(AF_INET, SOCK_STREAM, 0);
      if (sockfd < 0) 
         error("ERROR opening socket");
@@ -61,10 +65,9 @@ void share(int argc, char *argv[]){
      serv_addr.sin_port = htons(portno);
      if (bind(sockfd, (struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) 
               error("ERROR on binding");
-         int num=0;
-         
          unsigned char buff[20];
-     while(num<2){
+         int num=0;
+     while(num<1){
      	num++;
      listen(sockfd,5);
 	 clilen = sizeof(cli_addr);
@@ -76,60 +79,37 @@ void share(int argc, char *argv[]){
 	 string command;
 	 command=string(buffer);
 	 if(command=="share"){
-	 	// cout<<"command recieved\n";
-	 // 	listen(sockfd,5);
-	 // clilen = sizeof(cli_addr);
-  //    newsockfd = accept(sockfd,(struct sockaddr *) &cli_addr, &clilen);
 	 	char mdString[41];
      bzero(buff,20);
      read(newsockfd,buff,20);
-     // cout<<"buff recieved\n";
-    //  ofstream myfile;
-  	 // myfile.open ("seederlist.txt");
   	 	FILE * myfile;
-  	// // ifstream file(path, ifstream::binary);
   		myfile = fopen ("seederlist.txt" , "a" );
         for (int i = 0; i < 20; i++)
             sprintf(&mdString[i * 2], "%02x",buff[i]);
  		char *ipstr = new char[16];
 		strcpy(ipstr,inet_ntoa(cli_addr.sin_addr));
-		// cout<<"printing in file:";
 		fprintf(myfile, "%s ", mdString);
-  		// myfile << mdString;
-  		// myfile << "  ";
-  		char buffer2[40];
-  		bzero(buffer2,40);
-     	read(newsockfd,buffer2,40);
-     	printf("%s\n",buffer2);
-  		fprintf(myfile, "%s\n",buffer2);
-  		// myfile << ipstr;
-  		// fprintf( myfile, ":%s\n", cli_addr.sin_port);
-  		// myfile << ":" <<cli_addr.sin_port;
-  		// myfile << "\n";
+     	printf("%s:%d\n", ipstr,cli_addr.sin_port);
+  		fprintf(myfile, " %s",ipstr);
+  		fprintf(myfile, ":%d\n", cli_addr.sin_port);
   		printf("%s\n",mdString);
   		fclose(myfile);
-  		// cout << mdString;
-  		// cout << "  ";
-  		// cout << ipstr;
-  		// cout << ":" <<cli_addr.sin_port;
-  		// cout << "\n";
 	 }else if(command=="get"){
-	 // 	listen(sockfd,5);
-	 	// printf("getting data\n");
-	 // clilen = sizeof(cli_addr);
-  //    newsockfd = accept(sockfd,(struct sockaddr *) &cli_addr, &clilen);
 	 	char mString[41];
      bzero(buff,20);
      read(newsockfd,buff,20);
         for (int i = 0; i < 20; i++)
             sprintf(&mString[i * 2], "%02x",buff[i]);
-
 		std::vector<string> v;
+		printf("%s\n", mString);
 	v=seederlist(mString);
-	// printf("clients \n");
-
-	for(auto it=v.begin();it!=v.end();it++)
+	int n=v.size();
+	send(newsockfd,to_string(n).c_str(),40,0);
+	for(auto it=v.begin();it!=v.end();it++){
+		send(newsockfd,(*it).c_str(),40,0);
 		cout<<*it<<"\n";
+	}
+		
 	 }else if(command=="remove"){
 	 // 	ifstream fin;
 		// fin.open("seederlist.txt");

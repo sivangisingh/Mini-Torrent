@@ -43,6 +43,58 @@ void error(const char *msg)
     perror(msg);
     exit(0);
 }
+vector<unsigned char> create_mtorrent(int argc,string path,string mt_name){
+  // cout<<"fun2\n";
+  std::vector<unsigned char> hashval;
+  ofstream myfile;
+  myfile.open (mt_name);
+  myfile << tracker1+"\n";
+  myfile << tracker2+"\n";
+  myfile << path+"\n";
+
+  char * buffer;
+  size_t result;
+
+  FILE * pFile;
+  ifstream file(path, ifstream::binary);
+  pFile = fopen ( path.c_str() , "rb" );
+  struct stat status;
+  stat(path.c_str(), &status);
+  size_t total_size = status.st_size;
+  size_t chunk_size = 512 * 1024;
+  size_t total_chunks = total_size / chunk_size;
+  size_t last_size = total_size % chunk_size;
+
+  if (last_size != 0){
+      ++total_chunks;
+    }else{
+      last_size = chunk_size;
+    }
+    int j=0;
+  for (size_t chunk = 0; chunk < total_chunks; ++chunk)
+    {
+      size_t current_size;
+        if(chunk == total_chunks - 1){
+          current_size=last_size;
+        }else{
+          current_size=chunk_size;
+        }
+      buffer = (char*) malloc (sizeof(char)*current_size);
+      result = fread (buffer,1,current_size,pFile);
+      unsigned char obuf[20];
+      SHA1((const unsigned char*)buffer,current_size, obuf);
+      int i;
+      for (i = 0; i < 20; i++) {
+        hashval.push_back(obuf[i]);
+        j++;
+        myfile << obuf[i];
+      }
+      free(buffer);
+    }
+  myfile.close();
+  fclose (pFile);
+  return hashval;
+}
 class client{
 public:
 	size_t total_chunks;
@@ -81,12 +133,6 @@ int sendmtorrent(int argc, char *argv1,char *argv2,string path,unsigned char *sh
     n = write(sockfd, sha, 20);
     if (n < 0) 
          error("ERROR reading from socket");
-       printf("arg1 %s\n", argv1);
-       // string cl;
-       // cl=argv1;
-       // printf("%s\n", cl);
-       write(sockfd,argv1,40);
-    // printf("%s\n", buffer);
     close(sockfd);
     return 0;
 }
@@ -94,7 +140,6 @@ void filetaken(int argc, char *argv1,char *argv2,string path,string mt_name,stri
   // cout<<"fun1\n";
 	std::vector<unsigned char> hashval;
 	hashval=create_mtorrent(argc,path,mt_name);
-	int num=total_chunks;
 	unsigned char buff[hashval.size()],output[20];
 	for(int i=0;i<hashval.size();i++){
 		buff[i]=hashval[i];
@@ -103,71 +148,6 @@ void filetaken(int argc, char *argv1,char *argv2,string path,string mt_name,stri
   // cout<<"fun1 end";
   sendmtorrent(argc,argv1,argv2,path,output,com);
 }
-
-vector<unsigned char> create_mtorrent(int argc,string path,string mt_name){
-  // cout<<"fun2\n";
-	std::vector<unsigned char> hashval;
-  ofstream myfile;
-  myfile.open (mt_name);
-  myfile << tracker1+"\n";
-  myfile << tracker2+"\n";
-  myfile << path+"\n";
-
-  char * buffer;
-  size_t result;
-
-  FILE * pFile;
-  ifstream file(path, ifstream::binary);
-  pFile = fopen ( path.c_str() , "rb" );
-  struct stat status;
-  stat(path.c_str(), &status);
-  size_t total_size = status.st_size;
-  size_t chunk_size = 512 * 1024;
-  total_chunks = total_size / chunk_size;
-  size_t last_size = total_size % chunk_size;
-
-  if (last_size != 0){
-      ++total_chunks;
-    }else{
-      last_size = chunk_size;
-    }
-    int j=0;
-  for (size_t chunk = 0; chunk < total_chunks; ++chunk)
-    {
-      size_t current_size;
-        if(chunk == total_chunks - 1){
-          current_size=last_size;
-        }else{
-          current_size=chunk_size;
-        }
-      buffer = (char*) malloc (sizeof(char)*current_size);
-      result = fread (buffer,1,current_size,pFile);
-      unsigned char obuf[20];
-      SHA1((const unsigned char*)buffer,current_size, obuf);
-      int i;
-      for (i = 0; i < 20; i++) {
-        hashval.push_back(obuf[i]);
-        j++;
-        myfile << obuf[i];
-      }
-      free(buffer);
-    }
-  myfile.close();
-  fclose (pFile);
-  return hashval;
-}
-void file_transfer(){
-  return;
-}
-};
-class server{
-public:
-  void error(const char *msg)
-{
-    perror(msg);
-    exit(1);
-}
-
 int transfer(int argc, char *argv1,char *argv2,char *path, string file){
      int sockfd, newsockfd, portno;
      socklen_t clilen;
@@ -203,6 +183,73 @@ int transfer(int argc, char *argv1,char *argv2,char *path, string file){
      return 0; 
 }
 };
+class server{
+public:
+  void error(const char *msg)
+{
+    perror(msg);
+    exit(1);
+}
+
+
+void ask_tracker(int argc,char *argv1,char *argv2,unsigned char *output,string com){
+  // cout<<"fun3\n";
+    int sockfd, portno;
+    // string com="share";
+    struct sockaddr_in serv_addr;
+    struct hostent *server;
+    // char buffer[256];
+    portno = atoi(getport(argv2).c_str());
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) 
+        error("ERROR opening socket");
+    server = gethostbyname(getip(argv1).c_str());
+    if (server == NULL) {
+        fprintf(stderr,"ERROR, no such host\n");
+        exit(0);
+    }
+    bzero((char *) &serv_addr, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    bcopy((char *)server->h_addr,(char *)&serv_addr.sin_addr.s_addr,server->h_length);
+    serv_addr.sin_port = htons(portno);
+    if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) 
+        error("ERROR connecting");
+        write(sockfd,com.c_str(),20);
+   char buffer[40];
+   // printf("%d\n",num);
+   // read(newsockfd,buffer,20);
+   write(sockfd, output, 40);
+   bzero(buffer,40);
+   // int n;
+   read(sockfd,buffer,40);
+   int n=atoi(buffer);
+   std::vector<char *> v;
+   
+   for(int i=0;i<n;i++){
+    char buff[40];
+    bzero(buff,40);
+    char *cl;
+    read(sockfd,buff,40);
+    cl=buff;
+    v.push_back(cl);
+    // printf("%s\n",buffer);
+   }
+   for(int i=0;i<n;i++){
+    printf("%s\n",v[i]);
+   }
+}
+void get_clients(int argc, char *argv1,char *argv2,string path,string mt_name,string com){
+  std::vector<unsigned char> hashval;
+  hashval=create_mtorrent(argc,path,mt_name);
+  unsigned char buff[hashval.size()],output[20];
+  for(int i=0;i<hashval.size();i++){
+    buff[i]=hashval[i];
+  }
+  SHA1((const unsigned char*)buff,hashval.size(), output);
+  ask_tracker(argc,argv1,argv2,output,com);
+}
+
+};
 int main(int argc, char *argv[])
 {
   cout<<"enter command:\n";
@@ -213,17 +260,14 @@ int main(int argc, char *argv[])
     string mt_name;
     cin>>path>>mt_name;
     client c1;
-    // pthread_t thread;
-
-    // c1.filetaken(argc,argv[1],argv[2],path,mt_name,s);
     std::thread t1(&client::filetaken, client(),argc,argv[1],argv[2],path,mt_name,s);
     t1.join();
   }
   if(s=="get"){
     string mt_path,dest_path;
     cin>>mt_path>>dest_path;
-    client c1;
-    c1.filetaken(argc,argv[1],argv[2],mt_path,dest_path,s);
+    server s1;
+    s1.get_clients(argc,argv[1],argv[2],dest_path,mt_path,s);
     // std::thread t2(&client::)
   }
 	return 0;
